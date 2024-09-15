@@ -4,5 +4,5 @@
 
 Install the cli tool (only support ros1 bag)
 ```sh
-cargo install 
+cargo install simple-icp
 ```
