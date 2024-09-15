@@ -101,11 +101,35 @@ struct SimpleIcpCli {
 
     #[arg(long, default_value_t = 0)]
     start: usize,
+
+    #[arg(long)]
+    topic: Option<String>,
 }
 
 fn main() {
     let cli = SimpleIcpCli::parse();
     let bag = Ros1Bag::new(&cli.path);
+    if bag
+        .topic_to_type
+        .values()
+        .filter(|k| k.contains("sensor_msgs/PointCloud2"))
+        .count()
+        > 1
+        && cli.topic.is_none()
+    {
+        println!(
+            "More than one topic in the bag. Please use --topic to specify which lidar topic."
+        );
+        for kv in bag.topic_to_type {
+            println!("{}: {}", kv.0, kv.1);
+        }
+        return;
+    }
+    let topics = if let Some(topic) = cli.topic {
+        vec![topic]
+    } else {
+        vec![]
+    };
 
     let recording = rerun::RecordingStreamBuilder::new("visualize rosbag")
         .spawn()
@@ -114,7 +138,7 @@ fn main() {
     let min_val = 0.0;
     let max_val = 255.0;
     let mut pipeline = simple_icp::icp_pipeline::IcpPipeline::default_values();
-    for (i, msg) in bag.read_messages(&[]).enumerate() {
+    for (i, msg) in bag.read_messages(&topics).enumerate() {
         if i < cli.start {
             continue;
         }

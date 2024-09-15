@@ -25,7 +25,7 @@ impl Config {
         Config {
             voxel_size: 1.0,
             max_range: 100.0,
-            min_range: 5.0,
+            min_range: 1.0,
             max_points_per_voxel: 20,
 
             // th parms
