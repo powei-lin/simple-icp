@@ -98,6 +98,9 @@ fn pointcloud_to_vec_point3d(pcd: &PointCloud2) -> Vec<Point3d> {
 struct SimpleIcpCli {
     /// path to
     path: String,
+
+    #[arg(long, default_value_t = 0)]
+    start: usize,
 }
 
 fn main() {
@@ -111,7 +114,10 @@ fn main() {
     let min_val = 0.0;
     let max_val = 255.0;
     let mut pipeline = simple_icp::icp_pipeline::IcpPipeline::default_values();
-    for msg in bag.read_messages(&[]) {
+    for (i, msg) in bag.read_messages(&[]).enumerate() {
+        if i < cli.start {
+            continue;
+        }
         if let Msg::PointCloud2(pointcloud) = msg {
             let points = pointcloud_to_vec_point3d(&pointcloud);
             pipeline.process_frame(&points);
