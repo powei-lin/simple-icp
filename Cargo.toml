@@ -2,13 +2,26 @@
 name = "simple-icp"
 version = "0.1.0"
 edition = "2021"
+authors = ["Powei Lin <poweilin1994@gmail.com>"]
+description = "Kiss icp in pure rust"
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/powei-lin/simple-icp"
+repository = "https://github.com/powei-lin/simple-icp"
 
 [dependencies]
+clap = { version = "4.5.15", features = ["derive"] }
 colorous = "1.0.14"
 glob = "0.3.1"
 nalgebra = "0.33.0"
 pcd-rs = { version = "0.11.1", features = ["derive"] }
 rayon = "1.10.0"
-rerun = "0.17.0"
+rerun = "0.18.2"
 serde = "1.0.209"
 serde_json = "1.0.128"
+unbag-rs = "0.1.0"
+
+[[bin]]
+name = "simple_icp"
+path = "src/bin/simple_icp_cli.rs"
+test = false
+bench = false

@@ -3,7 +3,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::collections::HashMap;
 
 use crate::{
-    point3d::{self, Point3d},
+    point3d::{self},
     voxel_util::{self, na_vec_to_voxel},
 };
 
@@ -31,7 +31,7 @@ fn get_adjacent_voxels(voxel: &Voxel, adjacent_voxels: i32) -> Vec<Voxel> {
 }
 
 impl VoxelHashMap {
-    pub fn default() -> VoxelHashMap {
+    pub fn default_values() -> VoxelHashMap {
         VoxelHashMap {
             voxel_size: 1.0,
             max_distance: 100.0,
@@ -52,12 +52,13 @@ impl VoxelHashMap {
 
     fn update(&mut self, points: &VoxelPoints, current_origin: &na::Vector3<f64>) {
         self.add_points(points);
+        self.remove_points_too_far(current_origin);
     }
 
     pub fn get_na_points(&self) -> Vec<na::Vector3<f64>> {
         self.map
-            .iter()
-            .map(|(_, v)| {
+            .values()
+            .map(|v| {
                 v.iter()
                     .map(|p| p.to_na_vec_f64())
                     .collect::<Vec<na::Vector3<f64>>>()
@@ -103,17 +104,33 @@ impl VoxelHashMap {
                 {
                     // return;
                 } else {
-                    voxel_points.push(pt.clone());
-                    last_batch.push(pt.clone());
+                    voxel_points.push(*pt);
+                    last_batch.push(*pt);
                 }
             } else {
-                self.map.insert(voxel, vec![pt.clone()]);
-                last_batch.push(pt.clone());
+                self.map.insert(voxel, vec![*pt]);
+                last_batch.push(*pt);
             }
         });
         self.last_batch_points = last_batch;
     }
-    fn remove_points_too_far(&mut self) {}
+    fn remove_points_too_far(&mut self, current_origin: &na::Vector3<f64>) {
+        let max_distance2 = self.max_distance * self.max_distance;
+        let keys_too_far: Vec<Voxel> = self
+            .map
+            .par_iter()
+            .filter_map(|(k, vps)| {
+                if (vps[0].to_na_vec_f64() - current_origin).norm_squared() >= max_distance2 {
+                    Some(k.to_owned())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        keys_too_far.iter().for_each(|k| {
+            self.map.remove(k);
+        });
+    }
 
     pub fn get_closest_neighbor(
         &self,
@@ -139,7 +156,7 @@ impl VoxelHashMap {
                         })
                         .unwrap();
                     let distance = (neighbor.to_na_vec_f64() - point_na).norm();
-                    Some((neighbor.clone(), distance))
+                    Some((*neighbor, distance))
                 } else {
                     None
                 }

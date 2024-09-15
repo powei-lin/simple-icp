@@ -1,5 +1,3 @@
-use std::cmp::max;
-
 use crate::{
     adaptive_threshold::AdaptiveThreshold,
     config,
@@ -18,13 +16,13 @@ pub struct IcpPipeline {
 }
 
 impl IcpPipeline {
-    pub fn default() -> IcpPipeline {
-        let config = config::Config::default();
+    pub fn default_values() -> IcpPipeline {
+        let config = config::Config::default_values();
         IcpPipeline {
             config: config.clone(),
             t_origin_current: na::Isometry::identity(),
             t_prev_current: na::Isometry::identity(),
-            voxel_map: voxel_hash_map::VoxelHashMap::default(),
+            voxel_map: voxel_hash_map::VoxelHashMap::default_values(),
             adaptive_threshold: AdaptiveThreshold::new(
                 config.initial_threshold,
                 config.min_motion_th,
@@ -179,7 +177,6 @@ fn align_points_to_map(
 
     let mut t_icp = na::Isometry3::<f64>::identity();
     let mut converge_flag = false;
-    let mut count = 0;
     for i in 0..max_num_iterations {
         let correspondences = point_association(&source, voxel_map, max_distance);
         let (jtj, jtr) = build_linear_system(&correspondences, kernel_scale);
@@ -189,25 +186,6 @@ fn align_points_to_map(
                 println!("i {} cor {} k {}", i, correspondences.len(), kernel_scale);
                 println!("jtj {}", jtj);
                 println!("jtr {}", jtr);
-                let a = source
-                    .iter()
-                    .filter_map(|pt| {
-                        if let Some((closest_neighbor, distance)) =
-                            voxel_map.get_closest_neighbor(pt)
-                        {
-                            println!("gg");
-                            if distance < max_distance {
-                                Some((pt.to_na_vec_f64(), closest_neighbor))
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
-                    })
-                    .count();
-                println!("a {}", a);
-
                 panic!()
             }
         };
@@ -215,7 +193,6 @@ fn align_points_to_map(
         transform_points(&estimation, &mut source);
         t_icp = estimation * t_icp;
         if dx.norm() < convergence_criterion {
-            count = i + 1;
             converge_flag = true;
             break;
         }

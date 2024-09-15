@@ -42,7 +42,7 @@ pub fn clip_point_cloud_by_distance(
             if s < min2 || s > max2 {
                 None
             } else {
-                Some(pt.clone())
+                Some(*pt)
             }
         })
         .collect()

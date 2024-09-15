@@ -21,7 +21,7 @@ pub struct Config {
     pub deskew: bool,
 }
 impl Config {
-    pub fn default() -> Config {
+    pub fn default_values() -> Config {
         Config {
             voxel_size: 1.0,
             max_range: 100.0,
