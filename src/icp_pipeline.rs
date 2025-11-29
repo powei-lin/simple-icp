@@ -3,6 +3,7 @@ use crate::{
     config,
     lie_group::{Exp, Hat},
     point3d, voxel_hash_map, voxel_util,
+    optimization::pgo::PoseGraphOptimizer,
 };
 use nalgebra as na;
 use rayon::iter::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
@@ -13,6 +14,9 @@ pub struct IcpPipeline {
     t_prev_current: na::Isometry3<f64>,
     voxel_map: voxel_hash_map::VoxelHashMap,
     adaptive_threshold: AdaptiveThreshold,
+    pgo: PoseGraphOptimizer,
+    last_keyframe_pose: na::Isometry3<f64>,
+    keyframe_count: usize,
 }
 
 impl IcpPipeline {
@@ -28,6 +32,9 @@ impl IcpPipeline {
                 config.min_motion_th,
                 config.max_range as f64,
             ),
+            pgo: PoseGraphOptimizer::new(),
+            last_keyframe_pose: na::Isometry::identity(),
+            keyframe_count: 0,
         }
     }
     pub fn get_last_batch_points(&self) -> &Vec<point3d::Point3d> {
@@ -77,6 +84,33 @@ impl IcpPipeline {
             t_origin_next.translation,
             na::UnitQuaternion::from_quaternion(t_origin_next.rotation.normalize()),
         );
+
+        // Keyframe selection and optimization
+        let dist = (self.t_origin_current.translation.vector - self.last_keyframe_pose.translation.vector).norm();
+        let angle = self.t_origin_current.rotation.angle_to(&self.last_keyframe_pose.rotation);
+
+        if self.keyframe_count == 0 || dist > self.config.keyframe_distance_threshold || angle > self.config.keyframe_rotation_threshold {
+            let id = self.keyframe_count;
+            let fixed = id == 0; // Fix the first keyframe
+            
+            self.pgo.add_keyframe(id, self.t_origin_current, fixed);
+            
+            if id > 0 {
+                // Add odometry constraint from last keyframe
+                // T_prev_curr = T_prev^-1 * T_curr
+                let relative_pose = self.last_keyframe_pose.inverse() * self.t_origin_current;
+                self.pgo.add_odometry_constraint(id - 1, id, relative_pose);
+            }
+
+            self.pgo.optimize();
+
+            if let Some(optimized_pose) = self.pgo.get_optimized_pose(id) {
+                self.t_origin_current = optimized_pose;
+            }
+            
+            self.last_keyframe_pose = self.t_origin_current;
+            self.keyframe_count += 1;
+        }
 
         // Return the (deskew) input raw scan (frame) and the points used for registration (source)
         // (point_cloud, source)
