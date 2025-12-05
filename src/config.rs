@@ -19,6 +19,10 @@ pub struct Config {
 
     // Motion compensation
     pub deskew: bool,
+
+    // Keyframe params
+    pub keyframe_distance_threshold: f64,
+    pub keyframe_rotation_threshold: f64,
 }
 impl Config {
     pub fn default_values() -> Config {
@@ -39,6 +43,10 @@ impl Config {
 
             // Motion compensation
             deskew: false,
+
+            // Keyframe params
+            keyframe_distance_threshold: 1.0, // 1 meter
+            keyframe_rotation_threshold: 0.2, // ~11 degrees
         }
     }
 }

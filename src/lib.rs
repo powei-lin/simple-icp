@@ -5,3 +5,4 @@ pub mod lie_group;
 pub mod point3d;
 pub mod voxel_hash_map;
 pub mod voxel_util;
+pub mod optimization;
